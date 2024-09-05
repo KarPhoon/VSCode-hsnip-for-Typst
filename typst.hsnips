@@ -1,0 +1,472 @@
+# Define contexts for use
+# Use `> Inspect Editor Tokens and Scopes` to find out what context you're in
+global
+function scope_math(context) {return context.scopes.some(s => s.startsWith("markup.math.typst"));}
+function string(context) {return context.scopes.some(s => s.startsWith("string"));}
+//function comment(context) {return context.scopes.some(s => s.startsWith("comment"));}
+//function code(context) {return context.scopes.some(s => s.startsWith("meta.block.code"));}
+
+function math(context) {return scope_math(context) == 1 & string(context) == 0;}
+function text(context) {return math(context) == 0;}
+
+//Define vissual variable
+const vscode = require("vscode");
+var editor = vscode.window.activeTextEditor;
+var document = editor.document;
+let visual = "";
+let timeout = null;
+
+vscode.window.onDidChangeTextEditorSelection((e) => {
+    const selectedText = e.textEditor.document.getText(e.selections[0]);
+    if (selectedText) {
+        visual = selectedText.replace(/\\\\/g, "\\\\\\ ").replace(/\}/g, "\\}");
+        if (timeout) {
+            clearTimeout(timeout); 
+        }
+        timeout = setTimeout(() => {
+            visual = "";
+        }, 5000);
+    }
+});
+endglobal
+
+#--------------------text
+context text(context)
+snippet iff "if and only if" A
+if and only if
+endsnippet
+
+#--------------------visual
+context math(context)
+snippet `(\\)({)` "underbrace()" iA
+underbrace(``rv=visual``, $1)
+endsnippet
+
+context math(context)
+snippet `(\\)({)` "underbrace()" iA
+overbrace(``rv=visual``, $1)
+endsnippet
+
+#--------------------math mode
+context text(context)
+snippet mk "Inline Math" wA
+$${1}$ ${0}
+endsnippet
+
+context text(context)
+snippet `(\$[" "])(\.|\,|\?|\-)` "Auto formatting after Inline Math" iwA
+$``rv = m[2]`` ${0}
+endsnippet
+
+context text(context)
+snippet dm "Display Math" bA
+$
+  ${1} 
+$
+${0}
+endsnippet
+
+context math(context)
+snippet dis "display()" iA
+display(${1:``rv=visual``})
+sendsnippet
+
+#--------------------enviroment
+context text(context)
+snippet `(listabc)` "list " iA
+``
+const map = {"listabc": "#set enum(numbering: \"a)\")"}
+rv = map[m[1]] 
+``
++ 
+  $0
+endsnippet
+
+context text(context)
+snippet `(^|\s\s+)(\\)(def|thm|pf|prop|hyp|ex|sol|eg|prob|ans)` "Customized enviroments" bA
+``
+const map = {
+  "def": "definition",
+  "thm": "theorem",
+  "pf": "proof",
+  "prop": "property",
+  "hyp": "hypothesis",
+  "ex": "exercise",
+  "sol": "solution",
+  "eg": "example",
+  "prob": "problem",
+  "ans": "answer",
+  }
+rv = m[1] + '#' + map[m[3]] + '['
+``
+``rv = m[1]``  $1
+``rv = m[1] + ']' ``
+$0
+endsnippet
+
+context text(context)
+snippet `(^|\s\s+)(\\)(lemma|corollary|note|remark|question)` "Customized enviroments" bA
+``
+rv = m[1] + '#' + m[3] + '['
+``
+``rv = m[1]``  $1
+``rv = m[1] + ']' ``
+$0
+endsnippet
+
+#--------------------Greek alphabet
+context math(context)
+snippet `(\;)(a|b|g|d|e|z|h|t|i|k|l|m|n|x|r|s|\;t|u|p|vp|c|\;p|o)` "greek alphabet" iA
+``
+const map = {
+  "a": "alpha",
+  "b": "beta",
+  "g": "gamma",
+  "d": "delta",
+  "e": "epsilon",
+  "z": "zeta",
+  "h": "eta",
+  "t": "theta",
+  "i": "iota",
+  "k": "kappa",
+  "l": "lambda",
+  "m": "mu",
+  "n": "nu",
+  "x": "xi",
+  "r": "rho",
+  "s": "sigma",
+  ";t": "tau",
+  "u": "upsilon",
+  "p": "phi",
+  "vp": "phi.alt",
+  "c": "chi",
+  ";p": "psi",
+  "o": "omega"
+}
+rv = map[m[2]] 
+``
+endsnippet
+
+context math(context)
+snippet `(\;)(A|B|G|D|E|Z|T|L|X|R|S|U|P|C|\;P|O)` "Greek Alphabet " iA
+``
+const map = {
+  "A": "Alpha",
+  "B": "Beta",
+  "G": "Gamma",
+  "D": "Delta",
+  "E": "Epsilon",
+  "T": "Theta",
+  "L": "Lambda",
+  "X": "Xi",
+  "R": "Rho",
+  "S": "Sigma",
+  "U": "Upsilon",
+  "P": "Phi",
+  "C": "Chi",
+  ";P": "Psi",
+  "O": "Omega"
+}
+rv = map[m[2]] 
+``
+endsnippet
+
+#--------------------delimiters
+#Need disable "editor.autoClosingBrackets" and "editor.autoClosingQuotes" in setting for typst files
+#The additional regex (.?) solve the issues https://github.com/draivin/hsnips/issues/94
+
+snippet `(.?)(\()` "()" iA
+``rv = m[1]``($1)
+endsnippet
+
+snippet `(.?)(\[)` "[]" iA
+``rv = m[1]``[$1]
+endsnippet
+
+snippet `(.?)(\{)` "{}" iA
+``rv = m[1]``{$1}
+endsnippet
+
+context text(context)
+snippet `([^\w]|^)(\")` "quote" iA
+``rv = m[1] + "\""``$1``rv = "\""``
+endsnippet
+
+priority 500
+context text(context)
+snippet `(\"\")` "quote" iA
+``rv = "\""``$1``rv = "\""``
+endsnippet
+
+context scope_math(context)
+snippet `(.?)(\")` "quote" iA
+``rv = m[1] + "\""``$1``rv = "\""``
+endsnippet
+
+context math(context)
+snippet <> "angle.l $1 angle.r $0" iA
+angle.l $1 angle.r $0
+endsnippet
+
+context math(context)
+snippet abs "abs" iA
+abs($1)
+endsnippet
+
+#--------------------superscript
+context math(context)
+snippet tp "to the ... power" iA
+^(${1:3})
+endsnippet
+
+context math(context)
+snippet sr "^2" iA
+^2
+endsnippet
+
+context math(context)
+snippet invs "inverse" iA
+^(-1)
+endsnippet
+
+context math(context)
+snippet compl "complement" iA
+^(complement)
+endsnippet
+
+#--------------------subscript
+context math(context)
+snippet `(.?)(\_)` "subscript" iA
+``rv = m[1]``_($1)$0
+endsnippet
+
+context math(context)
+snippet `([A-Za-z\)]|\')( _)` "Auto close space for subscript" iA
+`` rv = m[1] ``_
+endsnippet
+
+context math(context)
+snippet `([A-Za-z\)]|\')(\d)` "Auto subscript" iA
+`` rv = m[1] + "_" + m[2]``
+endsnippet
+
+context math(context)
+snippet `([A-Za-z\)]|\')_(\d{2})` "Auto subscript" iA
+`` rv = m[1] + "_(" + m[2] + ")" ``
+endsnippet
+
+context math(context)
+snippet `(?<![A-Za-z])([A-Za-z])([A-Za-z])\2` "Auto subscript" iA
+`` rv = m[1] + "_" + m[2] ``
+endsnippet
+
+context math(context)
+snippet `(')([A-Za-z])\2` "Auto subscript for prime symbol" iA
+`` rv = m[1] + "_" + m[2] ``
+endsnippet
+
+context math(context)
+snippet `(\)|mu|alpha|sigma|rho|beta|gamma|delta|zeta|eta|varepsilon|epsilon|theta|iota|kappa|vartheta|lambda|nu|pi|rho|tau|upsilon|phi|chi|psi|omega|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Upsilon|Phi|Psi|Omega)([A-Za-z])\2` "Auto subscript for greek letter" iA
+`` rv = m[1] + "_" + m[2].substring(0, 1) ``
+endsnippet
+
+#--------------------accent
+context math(context)
+snippet `(?<![A-Za-z])([A-Za-z01])(grave|acute|hat|tilde|macron|breve|dot|diaer|circle|caron|vec|upright|italic|bo|sans|frak|mono|cal|ov)` "hat" iA
+``
+const map = {"vec": "arrow", "bo": "bold", "ov": "overline" }
+rv = (map[m[2]] || m[2]) + "(" + m[1] + ")"
+``
+endsnippet
+
+context math(context)
+snippet `(mu|alpha|sigma|rho|beta|gamma|delta|zeta|eta|varepsilon|epsilon|theta|iota|kappa|vartheta|lambda|nu|pi|rho|tau|upsilon|phi|chi|psi|omega|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Upsilon|Phi|Psi|Omega)(grave|acute|hat|tilde|macron|breve|dot|diaer|circle|caron|vec|upright|italic|o|sans|frak|mono|cal|ov)` "hat" iA
+``
+const map = {"vec": "arrow", "bo": "bold", "ov": "overline" }
+rv = (map[m[2]] || m[2]) + "(" + m[1] + ")"
+``
+endsnippet
+
+context math(context)
+snippet `((grave|acute|hat|tilde|macron|breve|dot|dot\.double|dot\.triple|dot\.quad|diaer|circle|acute\.double|caron|arrow|arrow\.l|upright|italic|bold|sans|frak|mono|bb|cal|overline)\([a-zA-Z\d]+\))(grave|acute|hat|tilde|macron|breve|dot|diaer|circle|caron|vec|upright|italic|bo|sans|frak|mono|cal|ov)` "hat" iA
+``
+const map = {"vec": "arrow", "bo": "bold", "ov": "overline" }
+rv = (map[m[3]] || m[3]) + "(" + m[1] + ")"
+``
+endsnippet
+
+#--------------------arrow
+priority 500
+context math(context)
+snippet iff "<=>" wA
+<=> $0
+endsnippet
+
+context math(context)
+snippet `(^|\s\s+)(=>|<=>)` "Auto align for arrow" bA
+``rv = m[1] + m[2]+ "&&"`` ${0}
+endsnippet
+
+context math(context)
+snippet `(^|\s\s+)(=>|<=>)(&|&&)(  )` "Change align for arrow" bA
+``
+const map = {"&": "&&", "&&": "&"}
+rv = m[1] + m[2]+ map[m[3]] + " "
+``
+endsnippet
+
+#--------------------set symbol
+context math(context)
+snippet set "set" iA
+{$1}
+endsnippet
+
+context math(context)
+snippet cc "subset" A
+subset $0
+endsnippet
+
+context math(context)
+snippet `(\\)(u)` "subset" iA
+union.big
+endsnippet
+
+context math(context)
+snippet `(\\)(n)` "subset" iA
+sect.big
+endsnippet
+
+context math(context)
+snippet `(subset|supset)(=| =)` "csubset" iA
+``rv = m[1]``.eq $0
+endsnippet
+
+context math(context)
+snippet notin "in.not" iA
+in.not
+endsnippet
+
+#--------------------relation symbol
+context math(context)
+snippet == "=&" iA
+=& $0
+endsnippet
+
+context math(context)
+snippet `(^|\s\s+)(=|>|<|<=|>=)( )` "Auto align for equal" iA
+``rv = m[1] + m[2]``& $0
+endsnippet
+
+context math(context)
+snippet `(\& )(=|>|<|<=|>=)` "Auto align for equal" iA
+``rv = m[1] + m[2] + "&"`` $0
+endsnippet
+
+#--------------------arithmetic symbol
+context math(context)
+snippet sq "sqrt()" iA
+sqrt($1)
+endsnippet
+
+context math(context)
+snippet rt "root()" iA
+root(${1:n}, $2)
+endsnippet
+
+context math(context)
+snippet +- "plus.minus" iA
+plus.minus $0
+endsnippet
+
+context math(context)
+snippet -+ "minus.plus" iA
+minus.plus $0
+endsnippet
+
+#--------------------calculus symbol
+context math(context)
+snippet lim "limit" iA
+lim_(${1:n} -> oo) $0
+endsnippet
+
+context math(context)
+snippet lsup "limsup" iA
+limsup_(${1:n} -> oo) $0
+endsnippet
+
+context math(context)
+snippet linf "liminf" iA
+liminf_(${1:n} -> oo) $0
+endsnippet
+
+context math(context)
+snippet `(d)([A-Za-z])( )` "Auto dif" iA
+dif ``rv = m[2] + m[3]``
+endsnippet
+
+context math(context)
+snippet `(d)(mu|alpha|sigma|rho|beta|gamma|delta|zeta|eta|varepsilon|epsilon|theta|iota|kappa|vartheta|lambda|nu|pi|rho|tau|upsilon|phi|chi|psi|omega|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Upsilon|Phi|Psi|Omega)( |\\)` "Auto dif" iA
+dif ``rv = m[2] + m[3]``
+endsnippet
+
+context math(context)
+snippet der "derive" iA
+(dif ${1:y})/(dif ${3:x})
+endsnippet
+
+context math(context)
+snippet dder "derive" iA
+(dif^2 ${1:y})/(dif ${3:x}^2)
+endsnippet
+
+context math(context)
+snippet par "partial" iA
+(diff ${1:y})/(diff ${3:x})
+endsnippet
+
+context math(context)
+snippet int "integral" iA
+integral
+endsnippet
+
+#--------------------align & space
+priority 500
+context math(context)
+snippet `(^|\s\s+)( )` "Auto add align" bA
+``rv = m[1]``& $0
+endsnippet
+
+context math(context)
+snippet `(^|\s+)(&|&&)(  )` "Auto change align" bA
+``
+const map = {"&": "&& ", "&&": ""}
+rv = m[1] + map[m[2]] ``
+endsnippet
+
+context math(context)
+snippet `(\S)(  )` "quad" bA
+``rv = m[1]`` quad $0
+endsnippet
+
+#--------------------others
+context math(context)
+snippet ...c "dots.c" iA
+dots.c
+endsnippet
+
+context math(context)
+snippet `([^\,\s])( |)(\.\.\.)` "Auto dots.c" iA
+``rv = m[1]`` dots.c $0
+endsnippet
+
+snippet `(\s*)([\w\s]+)(\.svg)` "figure" iA
+#figure(
+  image("``rv = m[2]``.svg${1}", width: 80%),
+  caption: [],
+)
+endsnippet
+
+
+
+
+
