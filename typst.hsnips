@@ -69,7 +69,7 @@ endsnippet
 context math(context)
 snippet dis "display()" iA
 display(${1:``rv=visual``})
-sendsnippet
+endsnippet
 
 #--------------------enviroment
 context text(context)
